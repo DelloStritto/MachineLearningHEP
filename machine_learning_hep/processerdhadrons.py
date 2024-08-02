@@ -19,13 +19,14 @@ main script for doing data processing, machine learning and analysis
 """
 import math
 import array
+from machine_learning_hep.processer_jet import create_hist
 import numpy as np
 from ROOT import TFile, TH1F
 from machine_learning_hep.bitwise import tag_bit_df
-from machine_learning_hep.utils.hist import fill_hist
 from machine_learning_hep.utilities import selectdfrunlist
 from machine_learning_hep.utilities import seldf_singlevar, read_df
-from machine_learning_hep.processer import Processer
+from machine_learning_hep.processer import Processer, dfquery
+from machine_learning_hep.utils.hist import bin_array, create_hist, fill_hist, get_axis
 
 class ProcesserDhadrons(Processer): # pylint: disable=too-many-instance-attributes
     # Class Attribute
@@ -46,6 +47,8 @@ class ProcesserDhadrons(Processer): # pylint: disable=too-many-instance-attribut
 
         self.p_mass_fit_lim = datap["analysis"][self.typean]['mass_fit_lim']
         self.p_bin_width = datap["analysis"][self.typean]['bin_width']
+        limits_mass = datap["analysis"][self.typean]["mass_fit_lim"]
+        nbins_mass = int(round((limits_mass[1] - limits_mass[0]) / self.p_bin_width))
         self.p_num_bins = int(round((self.p_mass_fit_lim[1] - self.p_mass_fit_lim[0]) / \
                                     self.p_bin_width))
         self.s_presel_gen_eff = datap["analysis"][self.typean]['presel_gen_eff']
@@ -60,6 +63,8 @@ class ProcesserDhadrons(Processer): # pylint: disable=too-many-instance-attribut
         self.triggerbit = datap["analysis"][self.typean]["triggerbit"]
         self.runlistrigger = runlisttrigger
         self.v_invmass = datap["variables"].get("var_inv_mass", "fM")
+        self.binarray_mass = bin_array(nbins_mass, limits_mass[0], limits_mass[1])
+        self.binarray_pthf = np.asarray(self.cfg('sel_an_binmin', []) + self.cfg('sel_an_binmax', [])[-1:], 'd')
 
     # pylint: disable=too-many-branches
     def process_histomass_single(self, index):
@@ -151,10 +156,20 @@ class ProcesserDhadrons(Processer): # pylint: disable=too-many-instance-attribut
                 fill_hist(h_invmass_sig, df_sig[self.v_invmass])
                 fill_hist(h_invmass_bkg, df_bkg[self.v_invmass])
                 fill_hist(h_invmass_refl, df_refl[self.v_invmass])
+
+                for sel_name, sel_spec in self.cfg('data_selections', {}).items():
+                    if sel_spec['level'] == self.mcordata:
+                        df_sel = dfquery(df, sel_spec['query'])
+                        h = create_hist(
+                            f'h_mass-pthf_{sel_name}',
+                            ';M (GeV/#it{c}^{2});p_{T}^{HF} (GeV/#it{c})',
+                            self.binarray_mass, self.binarray_pthf)
+                        fill_hist(h, df_sel[['fM', 'fPt']], write=True)
+                    
                 myfile.cd()
                 h_invmass_sig.Write()
                 h_invmass_bkg.Write()
-                h_invmass_refl.Write()
+                #h_invmass_refl.Write()
 
     # pylint: disable=line-too-long
     def process_efficiency_single(self, index):
