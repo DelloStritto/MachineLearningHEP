@@ -25,6 +25,8 @@ LcpKpi:
   sel_skim_binmax: [2,4,6,8,12,24] #list of nbins
   apply_yptacccut: false
   var_binning: fPt
+  do_ptshape: true
+  var_binning_ptshape: fPtWeighted
   dofullevtmerge: false
   var_cand: fCandidateSelFlag
   var_swap: fIsCandidateSwapped
@@ -252,10 +254,11 @@ LcpKpi:
     namefile_gen: AnalysisResultsGen.parquet
     namefile_reco_applieddata: AnalysisResultsRecoAppliedData.parquet
     namefile_reco_appliedmc: AnalysisResultsRecoAppliedMC.parquet
-    namefile_mcweights: mcweights.root
+    namefile_mcweights: NonPromptLcPtWeigths.root
     treeoutput: "Lctree"
     histofilename: "masshisto.root"
     efffilename: "effhisto.root"
+    histoweights: "ptWeigths"
     respfilename: "resphisto.root"
     crossfilename: "cross_section_tot.root"
 
